@@ -1,11 +1,17 @@
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
+
 frappe.provide("frappe.ui");
 
 frappe.ui.Scanner = class Scanner {
 	constructor(options) {
 		this.dialog = null;
 		this.handler = null;
+		this.controls = null;
+		this.video = null;
 		this.options = options;
 		this.is_alive = false;
+		this.stop_requested = false;
 
 		if (!("multiple" in this.options)) {
 			this.options.multiple = false;
@@ -21,18 +27,40 @@ frappe.ui.Scanner = class Scanner {
 	}
 
 	scan() {
-		this.load_lib().then(() => this.start_scan());
+		this.start_scan();
 	}
 
 	start_scan() {
+		this.stop_requested = false;
 		if (!this.handler) {
-			this.handler = new Html5Qrcode(this.scan_area_id); // eslint-disable-line
+			this.handler = new BrowserMultiFormatReader(this.get_hints());
 		}
+		if (!this.video) {
+			this.video = document.createElement("video");
+			this.video.setAttribute("playsinline", true);
+			this.video.muted = true;
+			this.$scan_area.empty().append(this.video);
+		}
+
 		this.handler
-			.start(
-				{ facingMode: "environment" },
-				{ fps: 10, qrbox: 250 },
-				(decodedText, decodedResult) => {
+			.decodeFromConstraints(
+				{
+					video: {
+						facingMode: { ideal: "environment" },
+						width: { ideal: 1280 },
+						height: { ideal: 720 },
+					},
+				},
+				this.video,
+				(result, error) => {
+					if (!result) {
+						if (error && !["NotFoundException", "ChecksumException"].includes(error.name)) {
+							console.error(error);
+						}
+						return;
+					}
+
+					const decodedResult = this.get_decoded_result(result);
 					if (this.options.on_scan) {
 						try {
 							this.options.on_scan(decodedResult);
@@ -44,27 +72,66 @@ frappe.ui.Scanner = class Scanner {
 						this.stop_scan();
 						this.hide_dialog();
 					}
-				},
-				(errorMessage) => {
-					// parse error, ignore it.
 				}
 			)
+			.then((controls) => {
+				this.controls = controls;
+				if (this.stop_requested) {
+					this.stop_scan();
+					return;
+				}
+				this.is_alive = true;
+			})
 			.catch((err) => {
 				this.is_alive = false;
 				this.hide_dialog();
 				console.error(err);
 			});
-		this.is_alive = true;
 	}
 
 	stop_scan() {
-		if (this.handler && this.is_alive) {
-			this.handler.stop().then(() => {
-				this.is_alive = false;
-				this.$scan_area.empty();
-				this.hide_dialog();
-			});
+		this.stop_requested = true;
+		if (this.controls) {
+			this.controls.stop();
+			this.controls = null;
+			this.is_alive = false;
+			this.$scan_area.empty();
+			this.video = null;
+			this.hide_dialog();
 		}
+	}
+
+	get_hints() {
+		const formats = this.options.formats || [
+			BarcodeFormat.CODE_128,
+			BarcodeFormat.DATA_MATRIX,
+			BarcodeFormat.QR_CODE,
+			BarcodeFormat.EAN_13,
+			BarcodeFormat.EAN_8,
+			BarcodeFormat.UPC_A,
+		];
+		const hints = new Map();
+
+		hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+		hints.set(DecodeHintType.TRY_HARDER, true);
+		hints.set(DecodeHintType.ASSUME_GS1, true);
+
+		return hints;
+	}
+
+	get_decoded_result(result) {
+		const text = result.getText();
+		const format = result.getBarcodeFormat();
+
+		return {
+			text,
+			format,
+			result: {
+				text,
+				format,
+			},
+			raw: result,
+		};
 	}
 
 	make_dialog() {
@@ -97,6 +164,6 @@ frappe.ui.Scanner = class Scanner {
 	}
 
 	load_lib() {
-		return frappe.require("/assets/frappe/node_modules/html5-qrcode/html5-qrcode.min.js");
+		return Promise.resolve();
 	}
 };
