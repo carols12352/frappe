@@ -10,6 +10,7 @@ frappe.ui.Scanner = class Scanner {
 		this.controls = null;
 		this.video = null;
 		this.options = options;
+		this.scan_count = 0;
 		this.is_alive = false;
 		this.stop_requested = false;
 
@@ -57,10 +58,12 @@ frappe.ui.Scanner = class Scanner {
 						if (error && !["NotFoundException", "ChecksumException"].includes(error.name)) {
 							console.error(error);
 						}
+						this.log_scan_attempt(error);
 						return;
 					}
 
 					const decodedResult = this.get_decoded_result(result);
+					this.log_scan_result(decodedResult);
 					if (this.options.on_scan) {
 						try {
 							this.options.on_scan(decodedResult);
@@ -104,6 +107,9 @@ frappe.ui.Scanner = class Scanner {
 	get_hints() {
 		const formats = this.options.formats || [
 			BarcodeFormat.CODE_128,
+			BarcodeFormat.CODE_39,
+			BarcodeFormat.ITF,
+			BarcodeFormat.CODABAR,
 			BarcodeFormat.DATA_MATRIX,
 			BarcodeFormat.QR_CODE,
 			BarcodeFormat.EAN_13,
@@ -117,6 +123,27 @@ frappe.ui.Scanner = class Scanner {
 		hints.set(DecodeHintType.ASSUME_GS1, true);
 
 		return hints;
+	}
+
+	log_scan_attempt(error) {
+		if (!this.options.debug) {
+			return;
+		}
+		this.scan_count++;
+		if (this.scan_count % 20 === 0) {
+			console.debug("Scanner running", {
+				attempts: this.scan_count,
+				last_error: error?.name,
+				video_width: this.video?.videoWidth,
+				video_height: this.video?.videoHeight,
+			});
+		}
+	}
+
+	log_scan_result(decodedResult) {
+		if (this.options.debug) {
+			console.debug("Scanner decoded", decodedResult);
+		}
 	}
 
 	get_decoded_result(result) {
