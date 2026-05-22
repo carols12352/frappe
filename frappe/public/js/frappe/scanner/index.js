@@ -105,14 +105,7 @@ frappe.ui.Scanner = class Scanner {
 	}
 
 	get_hints() {
-		const formats = this.options.formats || [
-			BarcodeFormat.CODE_128,
-			BarcodeFormat.DATA_MATRIX,
-			BarcodeFormat.QR_CODE,
-			BarcodeFormat.EAN_13,
-			BarcodeFormat.EAN_8,
-			BarcodeFormat.UPC_A,
-		];
+		const formats = this.options.formats || [BarcodeFormat.CODE_128];
 		const hints = new Map();
 
 		hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
