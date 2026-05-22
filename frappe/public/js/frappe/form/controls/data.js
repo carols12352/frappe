@@ -167,6 +167,7 @@ frappe.ui.form.ControlData = class ControlData extends frappe.ui.form.ControlInp
 					if (data && data.result && data.result.text) {
 						const text = data.result.text;
 						console.log("scanned barcode", JSON.stringify(text));
+						console.log("scanned barcode format", data.result.format);
 						console.log(
 							"scanned barcode chars",
 							[...text].map((character) => character.charCodeAt(0))

@@ -107,9 +107,6 @@ frappe.ui.Scanner = class Scanner {
 	get_hints() {
 		const formats = this.options.formats || [
 			BarcodeFormat.CODE_128,
-			BarcodeFormat.CODE_39,
-			BarcodeFormat.ITF,
-			BarcodeFormat.CODABAR,
 			BarcodeFormat.DATA_MATRIX,
 			BarcodeFormat.QR_CODE,
 			BarcodeFormat.EAN_13,
