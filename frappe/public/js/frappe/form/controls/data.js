@@ -168,6 +168,7 @@ frappe.ui.form.ControlData = class ControlData extends frappe.ui.form.ControlInp
 						const text = data.result.text;
 						console.log("scanned barcode", JSON.stringify(text));
 						console.log("scanned barcode format", data.result.format);
+						console.log("parsed GS1 GTIN", me.get_gs1_gtin(text));
 						console.log(
 							"scanned barcode chars",
 							[...text].map((character) => character.charCodeAt(0))
@@ -177,6 +178,11 @@ frappe.ui.form.ControlData = class ControlData extends frappe.ui.form.ControlInp
 				},
 			});
 		});
+	}
+
+	get_gs1_gtin(value) {
+		const match = String(value || "").match(/\(01\)(\d{14})/);
+		return match ? match[1] : null;
 	}
 
 	bind_change_event() {
