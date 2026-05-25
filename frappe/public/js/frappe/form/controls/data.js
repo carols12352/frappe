@@ -165,11 +165,24 @@ frappe.ui.form.ControlData = class ControlData extends frappe.ui.form.ControlInp
 				multiple: false,
 				on_scan(data) {
 					if (data && data.result && data.result.text) {
-						me.set_value(data.result.text);
+						const text = data.result.text;
+						console.log("scanned barcode", JSON.stringify(text));
+						console.log("scanned barcode format", data.result.format);
+						console.log("parsed GS1 GTIN", me.get_gs1_gtin(text));
+						console.log(
+							"scanned barcode chars",
+							[...text].map((character) => character.charCodeAt(0))
+						);
+						me.set_value(text);
 					}
 				},
 			});
 		});
+	}
+
+	get_gs1_gtin(value) {
+		const match = String(value || "").match(/\(01\)(\d{14})/);
+		return match ? match[1] : null;
 	}
 
 	bind_change_event() {
